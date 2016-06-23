@@ -9,7 +9,7 @@ from scipy.optimize import fmin
 
 print "start program"
 
-#finds time resolution (40% on peak rise time)
+#finds time to reach 40% of the amplitude at the trigger PMT
 def find_res(v):
     t = np.empty(v.shape[0],dtype=float)
     for i in range(len(v)):
@@ -37,11 +37,18 @@ def gauss(v,bins):
         return np.sum((pdf-hist)**2/hist_sigma)
     return fmin(foo,[avg,sig,1000])
 
-#Finds the amplitude and filters out values below a certain value
+#finds the amplitude and filters out values below a certain value
 def find_amp(v):
         amplitude = np.min(v,axis=1)
         filteramp = amplitude[amplitude < -200]
         return abs(filteramp)
+        
+#finds the time to reach the trigger PMT        
+def PMT_time(v):
+        amp = np.min(v,axis=1)
+        amp *= .4 #we want to look at time to reach 40% of the amplitude
+        t40 = find_time(amp)
+        return t40
 
 if __name__ == '__main__':
     import argparse
@@ -54,19 +61,26 @@ if __name__ == '__main__':
     f = h5py.File(args.filename)
     dset = f['c1'][:100000]
     amp = find_amp(dset)
-    f_dset = dset[amp > 100]
+    f_dset = dset[amp > 200]
 
-    t1 = find_res(f_dset)
-    t = t1.copy()
-    t *= 0.5
+    t_tr = find_time(dset)
+    t = t_tr.copy()
+    t *= 0.5 #ns conversion
     t -= np.mean(t)
+
+    t_pmt = PMT_time(f_dset)
+    t2 = t_pmt.copy()
+    t2 *= 0.5
+    t2 -= np.mean(t)
+
+    res = t2 - t
 
     bins = np.arange(-50,50,0.5)
     x = np.linspace(-50,50,100000)
-    result = gauss(t,bins)
+    result = gauss(res,bins)
     mu, std, c = result
 
-    plt.hist(t, bins)
+    plt.hist(res, bins)
     plt.title("PMT Time Resolution")
     plt.xlabel("Time Resolution")
     plt.plot(x,c*norm.pdf(x,mu,std))
