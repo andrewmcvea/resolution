@@ -55,16 +55,16 @@ if __name__ == '__main__':
     f = h5py.File(args.filename)
     dset = f['c1'][:100000]
     amp = find_amp(dset)
-    f_dset = dset[amp < -200]
+    f_dset = dset #[amp < -200]
 
     t_tr = find_time(f_dset)
     t = t_tr.copy()
     t *= 0.5 #ns conversion
     t -= np.mean(t)
 
-    dset2 = f['c2'][:100000]
+    dset2 = f['c3'][:100000]
     amp2 = find_amp(dset2)
-    f_dset2 = dset2[amp2 < -200]
+    f_dset2 = dset2 #[amp2 < -200]
 
     ts = find_time(f_dset2)
     t2 = ts.copy()
