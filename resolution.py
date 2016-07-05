@@ -10,7 +10,7 @@ import heapq
 
 print "start program"
 
-#finds time for each PMT (40% on peak rise time)
+#finds time to reach 40% of peak amplitude for each pulse
 def find_time(v):
     t = np.empty(v.shape[0],dtype=float)
     for i in range(len(v)):
@@ -43,7 +43,7 @@ def gauss(v,bins):
 def find_amp(v):
         amplitude = np.min(v,axis=1)
         filteramp = amplitude[amplitude < -200]
-        return amplitude
+        return filteramp
 
 if __name__ == '__main__':
     import argparse
@@ -56,9 +56,9 @@ if __name__ == '__main__':
     f = h5py.File(args.filename)
     dset = f['c1'][:100000]
     amp = find_amp(dset)
-    f_dset = dset[amp]
+    f_dset = dset[amp] #filters dataset to exclude noise below 200ADC
 
-    t_tr = find_time(f_dset)
+    t_tr = find_time(f_dset) #time for trigger PMT
     t = t_tr.copy()
     t *= 0.5 #ns conversion
     t -= np.mean(t)
@@ -66,15 +66,15 @@ if __name__ == '__main__':
     dset2 = f['c2'][:100000]
     amp2 = np.min(dset2,axis=1)
     size = len(f_dset)
-    famp2 = heapq.nlargest(size, amp2) 
+    famp2 = heapq.nlargest(size, amp2) #takes largest n values from channel 2 that correspond to the n values from channel 1
     f_dset2 = dset2[famp2]
 
-    ts = find_time(f_dset2)
+    ts = find_time(f_dset2) #time on signal PMT
     t2 = ts.copy()
-    t2 *= 0.5 #ns conversion
+    t2 *= 0.5 
     t2 -= np.mean(t2)
 
-    res = t2 - t
+    res = t2 - t #time resolution to be plotted
 
     bins = np.arange(-50,50,0.5)
     x = np.linspace(-50,50,100000)
