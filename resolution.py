@@ -1,4 +1,4 @@
-#Imported packages for histograms
+#Imported packages               
 from __future__ import division
 import h5py
 import numpy as np
@@ -6,6 +6,7 @@ from zmq_client import adc_to_voltage
 import sys
 from scipy.stats import norm
 from scipy.optimize import fmin
+import heapq
 
 print "start program"
 
@@ -42,7 +43,7 @@ def gauss(v,bins):
 def find_amp(v):
         amplitude = np.min(v,axis=1)
         filteramp = amplitude[amplitude < -200]
-        return filteramp
+        return amplitude
 
 if __name__ == '__main__':
     import argparse
@@ -55,16 +56,17 @@ if __name__ == '__main__':
     f = h5py.File(args.filename)
     dset = f['c1'][:100000]
     amp = find_amp(dset)
-    f_dset = dset #[amp < -200]
+    f_dset = dset[amp < -200]
 
     t_tr = find_time(f_dset)
     t = t_tr.copy()
     t *= 0.5 #ns conversion
     t -= np.mean(t)
 
-    dset2 = f['c3'][:100000]
+    dset2 = f['c2'][:100000]
     amp2 = find_amp(dset2)
-    f_dset2 = dset2 #[amp2 < -200]
+    famp2 = heapq.nlargest(220, amp2) #depends on size of amp < -200
+    f_dset2 = dset2[famp2]
 
     ts = find_time(f_dset2)
     t2 = ts.copy()
