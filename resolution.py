@@ -56,7 +56,7 @@ if __name__ == '__main__':
     f = h5py.File(args.filename)
     dset = f['c1'][:100000]
     amp = find_amp(dset)
-    f_dset = dset[amp < -200]
+    f_dset = dset[amp]
 
     t_tr = find_time(f_dset)
     t = t_tr.copy()
@@ -64,7 +64,7 @@ if __name__ == '__main__':
     t -= np.mean(t)
 
     dset2 = f['c2'][:100000]
-    amp2 = find_amp(dset2)
+    amp2 = np.min(dset2,axis=1)
     size = len(f_dset)
     famp2 = heapq.nlargest(size, amp2) 
     f_dset2 = dset2[famp2]
