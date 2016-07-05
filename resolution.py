@@ -65,7 +65,8 @@ if __name__ == '__main__':
 
     dset2 = f['c2'][:100000]
     amp2 = find_amp(dset2)
-    famp2 = heapq.nlargest(220, amp2) #depends on size of amp < -200
+    size = len(f_dset)
+    famp2 = heapq.nlargest(size, amp2) 
     f_dset2 = dset2[famp2]
 
     ts = find_time(f_dset2)
