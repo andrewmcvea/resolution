@@ -1,12 +1,12 @@
 #Imported packages
 from __future__ import division
 import h5py
+import math
 import numpy as np
 from zmq_client import adc_to_voltage
-import sys
 from scipy.stats import norm
 from scipy.optimize import fmin
-import heapq
+from scipy.special import erf
 
 print "start program"
 
@@ -58,6 +58,12 @@ def gauss(v,bins):
         return np.sum((pdf-hist)**2/hist_sigma)
     return fmin(foo,[avg,sig,1000])
 
+#Fits the data with the given fittting function
+def find_fit(v, t_1, trig_mu, trig_sig, amp1):
+    fit = (amp1*(1/t_1)/2)*(math.e**(((1/t_1)/2)*(2*trig_mu +(1/t_1)*((trig_sig)**2)-2*v)))* \
+          (erf((trig_mu+(1/t_1)*((trig_sig)**2)-v)/(math.sqrt(2)*trig_sig)))
+    return fit
+
 if __name__ == '__main__':
     import argparse
     import sys
@@ -89,10 +95,15 @@ if __name__ == '__main__':
     x = np.linspace(np.min(t),np.max(t),100000)
     result = gauss(t,bins)
     mu, std, c = result
+    
+    amplitude = np.min(y1,axis=1)
+    amplitude *= .4
+    hist_fit = find_fit(x, t1, mu, std, amplitude)
 
     plt.hist(t, bins)
     plt.xlabel("Time Resolution")
     plt.plot(x,c*norm.pdf(x,mu,std))
+    plt.plot(hist_fit)
     plt.title(r'$\sigma$ = %.2f' % std)
     plt.yscale('log')
     plt.ylim(ymin=1)
