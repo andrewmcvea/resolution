@@ -60,8 +60,10 @@ def gauss(v,bins):
 
 #Fits the data with the given fittting function
 def find_fit(v, t_1, trig_mu, trig_sig, amp1):
-    fit = (amp1*(1/t_1)/2)*(math.e**(((1/t_1)/2)*(2*trig_mu +(1/t_1)*((trig_sig)**2)-2*v)))* \
-          (erf((trig_mu+(1/t_1)*((trig_sig)**2)-v)/(math.sqrt(2)*trig_sig)))
+    lm = 1/t_1
+    fit = (lm/2)*amp1*(math.e**((lm/2)*(2*trig_mu + lm*(trig_sig**2) - 2*v)))* \
+          erf((trig_mu + lm*(trig_sig**2) - v)/(math.sqrt(2)*trig_sig))
+    print amp1
     return fit
 
 if __name__ == '__main__':
@@ -98,15 +100,15 @@ if __name__ == '__main__':
     
     amplitude = np.min(y1,axis=1)
     amplitude *= .4
-    hist_fit = find_fit(x, t1, mu, std, amplitude)
+    hist_fit = find_fit(res, t1, mu, std, amplitude)
 
     plt.hist(t, bins)
     plt.xlabel("Time Resolution")
     plt.plot(x,c*norm.pdf(x,mu,std))
-    plt.plot(hist_fit)
+    plt.plot(res, hist_fit)
     plt.title(r'$\sigma$ = %.2f' % std)
-    plt.yscale('log')
-    plt.ylim(ymin=1)
+#    plt.yscale('log')
+#    plt.ylim(ymin=1)
 
 print std
 plt.show()
