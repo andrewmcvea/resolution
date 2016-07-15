@@ -6,6 +6,7 @@ import numpy as np
 from zmq_client import adc_to_voltage
 from scipy.stats import norm
 from scipy.optimize import fmin
+from scipy.optimize import curve_fit
 from scipy.special import erf
 
 print "start program"
@@ -44,27 +45,10 @@ def fft_filter(y, dt, cutoff=500e6):
     out[:,freq > cutoff] = 0
     return np.fft.irfft(out)
 
-#creates a gaussian fit for the data
-def gauss(v,bins):
-    avg = np.mean(v)
-    sig = np.std(v)
-    bincenters = (bins[1:] + bins[:-1])/2
-    hist, _ = np.histogram(v,bins)
-    hist_sigma = hist.copy()
-    hist_sigma[hist == 0] = 1
-    def foo(args):
-        mu, std, c = args
-        pdf = c*norm.pdf(bincenters,mu,std)
-        return np.sum((pdf-hist)**2/hist_sigma)
-    return fmin(foo,[avg,sig,1000])
-
 #Fits the data with the given fittting function
-def find_fit(v, t_1, trig_mu, trig_sig, amp1):
-    lm = 1/t_1
-    fit = (lm/2)*amp1*(math.e**((lm/2)*(2*trig_mu + lm*(trig_sig**2) - 2*v)))* \
-          erf((trig_mu + lm*(trig_sig**2) - v)/(math.sqrt(2)*trig_sig))
-    print amp1
-    return fit
+def find_fit(x,amp, mu, sd):
+    gaussian = amp*np.exp(-(((x-mu)**2)/(2*sd**2)))
+    return gaussian
 
 if __name__ == '__main__':
     import argparse
@@ -91,24 +75,35 @@ if __name__ == '__main__':
                 y2 = y2[mask]
                 t1 = get_times(y1)*0.5 # sample -> ns
                 t2 = get_times(y2)*0.5
-                t.extend(t2 - t1)
+                res = t2 - t1
+                t.extend(res)
 
+    l = len(t)
+    bins1 = np.linspace(np.min(t),np.max(t),l)
+
+    y, x = np.histogram(t, bins1) #Outputs the values for a histogram
+    center = (x[1:] + x[:-1])/2 #finds the center of the bins
+
+    #Approxiamtions for the parameters
+    guess_amp = np.max(y)
+    guess_mu = np.average(t)
+    guess_sd = np.std(t)
+
+    popt, pcov = curve_fit(find_fit, center, y, p0 = [guess_amp,guess_mu,guess_sd])
+    fit = find_fit(center, *popt)
     bins = np.arange(np.min(t),np.max(t),1)
-    x = np.linspace(np.min(t),np.max(t),100000)
-    result = gauss(t,bins)
-    mu, std, c = result
-    
-    amplitude = np.min(y1,axis=1)
-    amplitude *= .4
-    hist_fit = find_fit(res, t1, mu, std, amplitude)
+
+    print 'Guesses:'
+    print 'amp=', guess_amp
+    print 'mu=', guess_mu
+    print 'std=', guess_sd
+    print popt
 
     plt.hist(t, bins)
     plt.xlabel("Time Resolution")
-    plt.plot(x,c*norm.pdf(x,mu,std))
-    plt.plot(res, hist_fit)
-    plt.title(r'$\sigma$ = %.2f' % std)
-#    plt.yscale('log')
-#    plt.ylim(ymin=1)
+    plt.plot(center,fit)
+    plt.title(r'$\sigma$ = %.2f' % guess_sd)
+    plt.yscale('log')
+    plt.ylim(ymin=.9)
 
-print std
 plt.show()
