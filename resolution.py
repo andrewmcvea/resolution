@@ -77,7 +77,7 @@ if __name__ == '__main__':
                 res = t2 - t1
                 t.extend(res)
 
-    g_t = [a for a in t if a > 0 and a < 25]
+    g_t = [a for a in t if a > 0 and a < 20]
     l = len(g_t)
     bins = np.linspace(np.min(t),np.max(t),l)
 
