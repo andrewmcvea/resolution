@@ -101,7 +101,7 @@ if __name__ == '__main__':
     plt.hist(t, bins)
     plt.xlabel("Time Resolution")
     plt.plot(center,fit)
-    plt.title(r'$\sigma$ = %.2f' % guess_sd)
+    plt.title(popt)
     plt.yscale('log')
     plt.ylim(ymin=.9)
 
