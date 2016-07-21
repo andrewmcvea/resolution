@@ -46,9 +46,18 @@ def fft_filter(y, dt, cutoff=500e6):
     return np.fft.irfft(out)
 
 #Fits the data with the given fittting function
-def find_fit(x,amp, mu, sd):
-    gaussian = amp*np.exp(-(((x-mu)**2)/(2*sd**2)))
+def find_gauss(x, amp, mu, sd):
+    gaussian = amp*np.exp(-(((x-mu)**2)/(2*sd**2))) #general gaussian functional form
     return gaussian
+
+def find_fit(x, t1, mu, sigma, amp1, t2, amp2):
+    lmb1 = 1/t1
+    lmb2 = 1/t2
+    exp_fit = (amp1*(lmb1/2)*(math.e**((lmb1/2)*(2*mu + lmb1*(sigma**2) - 2*x)))) * \
+              (erf((mu + lmb1*(sigma**2) - x)/(math.sqrt(2)*sigma))) + \
+              (amp2*(lmb2/2)*(math.e**((lmb2/2)*(2*mu + lmb2*(sigma**2) - 2*x)))) * \
+              (erf((mu + lmb2*(sigma**2) - x)/(math.sqrt(2)*sigma)))
+    return exp_fit
 
 if __name__ == '__main__':
     import argparse
@@ -61,6 +70,7 @@ if __name__ == '__main__':
     parser.add_argument('-c', '--chunk', type=int, default=10000)
     args = parser.parse_args()
 
+#Calculate the time resolution for each pulse and creates an array of these values
     t = []
     for filename in args.filenames:
         with h5py.File(filename) as f:
@@ -77,33 +87,63 @@ if __name__ == '__main__':
                 t2 = get_times(y2)*0.5
                 res = t2 - t1
                 t.extend(res)
+    """
+    g_t = [a for a in t if a > 0 and a < 20] #filters out the tail for better gaussian fitting
+    l = len(g_t)
+    bins = np.linspace(np.min(t),np.max(t),l)
 
-    l = len(t)
-    bins1 = np.linspace(np.min(t),np.max(t),l)
-
-    y, x = np.histogram(t, bins1) #Outputs the values for a histogram
+    y, x = np.histogram(g_t, bins) #Outputs the values for a histogram
     center = (x[1:] + x[:-1])/2 #finds the center of the bins
 
     #Approxiamtions for the parameters
-    guess_amp = np.max(y)
-    guess_mu = np.average(t)
-    guess_sd = np.std(t)
+    guess_amp = np.amax(y,axis=0)
+    guess_mu = np.average(g_t)
+    guess_sd = np.std(g_t)
 
-    popt, pcov = curve_fit(find_fit, center, y, p0 = [guess_amp,guess_mu,guess_sd])
-    fit = find_fit(center, *popt)
-    bins = np.arange(np.min(t),np.max(t),1)
+    popt, pcov = curve_fit(find_gauss, center, y, p0 = [guess_amp,guess_mu,guess_sd]) #finds parameters for gaussian
+    fit = find_gauss(center, *popt)
 
     print 'Guesses:'
     print 'amp=', guess_amp
     print 'mu=', guess_mu
     print 'std=', guess_sd
     print popt
+    """
+
+#    t = [a for a in t if a >= 0]
+    bins = np.linspace(np.min(t),np.max(t),1000)
+
+    y, x = np.histogram(t, bins) #Outputs the values for a histogram
+    center = (x[1:] + x[:-1])/2 #finds the center of the bins
+
+    #Approxiamtions for the parameters
+    guess_mu = np.average(t)
+    guess_sd = np.std(t)
+    guess_amp1 = np.amax(y,axis=0)
+    decay_amp = min(y, key=lambda x:abs(x-(guess_amp1/math.e)))
+    guess_t1 = float(x[y == decay_amp])
+    guess_amp2 = 9*10**4
+    guess_t2 = 26
+
+    #finds parameters
+    popt, pcov = curve_fit(find_fit, center, y, p0 = [guess_t1,guess_mu,guess_sd,guess_amp1,guess_t2,guess_amp2])
+    fit = find_fit(center, *popt)
+
+    print pcov
+
+    print 'Guesses:'
+    print 't=', guess_t1
+    print 'mu=', guess_mu
+    print 'std=', guess_sd
+    print 'amp=', guess_amp1
+    print '[t1,mu,std,amp1,t2,amp2]:'
+    print popt
 
     plt.hist(t, bins)
     plt.xlabel("Time Resolution")
     plt.plot(center,fit)
-    plt.title(r'$\sigma$ = %.2f' % guess_sd)
-    plt.yscale('log')
-    plt.ylim(ymin=.9)
+    plt.title(popt)
+#    plt.yscale('log')
+#    plt.ylim(ymin=.9)
 
 plt.show()
