@@ -1,12 +1,12 @@
 #Imported packages
 from __future__ import division
-import h5py
 import math
+import h5py
 import numpy as np
-from zmq_client import adc_to_voltage
 from scipy.stats import norm
 from scipy.optimize import fmin
-from scipy.optimize import curve_fit
+from scipy.special import erf
+from lmfit import minimize, Parameters, Parameter, report_fit
 
 print "start program"
 
@@ -45,9 +45,35 @@ def fft_filter(y, dt, cutoff=500e6):
     return np.fft.irfft(out)
 
 #Fits the data with the given fittting function
-def find_fit(x,amp, mu, sd):
-    gaussian = amp*np.exp(-(((x-mu)**2)/(2*sd**2)))
+def find_gauss(x, amp, mu, sd):
+    gaussian = amp*np.exp(-(((x-mu)**2)/(2*sd**2))) #general gaussian functional form
     return gaussian
+
+#Finds the best fit using the given equation
+def find_fit(params, x, y):
+    t1 = params['n0'].value
+    mu = params['n1'].value
+    sigma = params['n2'].value
+    amp1 = params['n3'].value
+    t2 = params['n4'].value
+    amp2 = params['n5'].value
+    t3 = params['n6'].value
+    amp3 = params['n7'].value
+
+    lmb1 = 1/t1
+    lmb2 = 1/t2
+    lmb3 = 1/t3
+    exp_fit = (amp1*(lmb1/2)*(math.e**((lmb1/2)*(2*mu + lmb1*(sigma**2) - 2*x)))) * \
+              (1-(erf((mu + lmb1*(sigma**2) - x)/(math.sqrt(2)*sigma)))) + \
+              (amp2*(lmb2/2)*(math.e**((lmb2/2)*(2*mu + lmb2*(sigma**2) - 2*x)))) * \
+              (1-(erf((mu + lmb2*(sigma**2) - x)/(math.sqrt(2)*sigma)))) + \
+              (amp3*(lmb3/2)*(math.e**((lmb3/2)*(2*mu + lmb3*(sigma**2) - 2*x)))) * \
+              (1-(erf((mu + lmb3*(sigma**2) - x)/(math.sqrt(2)*sigma))))
+    return abs(exp_fit - y)
+
+#Converts ADC counts to a voltage
+def adc_to_voltage(a):
+    return a/1900.77
 
 if __name__ == '__main__':
     import argparse
@@ -60,6 +86,7 @@ if __name__ == '__main__':
     parser.add_argument('-c', '--chunk', type=int, default=10000)
     args = parser.parse_args()
 
+#Calculate the time resolution for each pulse and creates an array of these values
     t = []
     for filename in args.filenames:
         with h5py.File(filename) as f:
@@ -77,32 +104,69 @@ if __name__ == '__main__':
                 res = t2 - t1
                 t.extend(res)
 
-    g_t = [a for a in t if a > 0 and a < 20]
-    l = len(g_t)
-    bins = np.linspace(np.min(t),np.max(t),l)
+    t = [a for a in t if a >= 0 and a <= 200]
+    bins = np.linspace(np.min(t),np.max(t),1000)
 
-    y, x = np.histogram(g_t, bins) #Outputs the values for a histogram
+    y, x = np.histogram(t, bins) #Outputs the values for a histogram
     center = (x[1:] + x[:-1])/2 #finds the center of the bins
-
+    
     #Approxiamtions for the parameters
-    guess_amp = np.amax(y,axis=0)
-    guess_mu = np.average(g_t)
-    guess_sd = np.std(g_t)
-
-    popt, pcov = curve_fit(find_fit, center, y, p0 = [guess_amp,guess_mu,guess_sd])
-    fit = find_fit(center, *popt)
+    guess_mu = np.average(t)
+    guess_sd = np.std(t)
+    guess_amp1 = np.amax(y,axis=0)
+    decay_amp = min(y, key=lambda x:abs(x-(guess_amp1/math.e)))
+    guess_t1 = float(x[y == decay_amp])
 
     print 'Guesses:'
-    print 'amp=', guess_amp
+    print 'amp=', guess_amp1
     print 'mu=', guess_mu
     print 'std=', guess_sd
-    print popt
+    print 't1=', guess_t1
+
+    params = Parameters()
+    params.add('n0', value= guess_t1, min=1, max=100)
+    params.add('n1', value= guess_mu, min=(guess_mu*.5), max=(guess_t1*2))
+    params.add('n2', value= 1.2, min=.8, max=1.5)
+    params.add('n3', value= guess_amp1, min=(guess_amp1*.5), max=(guess_amp1*1.5))
+    params.add('n4', value= 20, min=1, max=1000)
+    params.add('n5', value= 7, min=0, max=1000000)
+    params.add('n6', value= 20, min=1, max=10000)
+    params.add('n7', value= 7, min=0, max=1000)
+
+    result = minimize(find_fit, params, args=(center, y))
+
+    t1 = result.params['n0']
+    mu = result.params['n1']
+    sigma = result.params['n2']
+    amp1 = result.params['n3']
+    t2 = result.params['n4']
+    amp2 = result.params['n5']
+    t3 = result.params['n6']
+    amp3 = result.params['n7']
+
+    lmb1 = 1/t1
+    lmb2 = 1/t2
+    lmb3 = 1/t3
+    x_fit = (amp1*(lmb1/2)*(math.e**((lmb1/2)*(2*mu + lmb1*(sigma**2) - 2*x)))) * \
+              (1-(erf((mu + lmb1*(sigma**2) - x)/(math.sqrt(2)*sigma)))) + \
+              (amp2*(lmb2/2)*(math.e**((lmb2/2)*(2*mu + lmb2*(sigma**2) - 2*x)))) * \
+              (1-(erf((mu + lmb2*(sigma**2) - x)/(math.sqrt(2)*sigma)))) + \
+              (1-(erf((mu + lmb3*(sigma**2) - x)/(math.sqrt(2)*sigma))))
+
+    print 'Values:'
+    print 't1=', t1
+    print 'mu=', mu
+    print 'std=', sigma
+    print 'amp1=', amp1
+    print 't2=', t2
+    print 'amp2=', amp2
+    print 't3=', t3
+    print 'amp3=', amp3
 
     plt.hist(t, bins)
     plt.xlabel("Time Resolution")
-    plt.plot(center,fit)
-    plt.title(popt)
-    plt.yscale('log')
-    plt.ylim(ymin=.9)
+    plt.plot(bins, x_fit)
+#    plt.yscale('log')
+#    plt.ylim(ymin=.9)
 
 plt.show()
