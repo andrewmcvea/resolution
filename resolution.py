@@ -59,6 +59,9 @@ def find_fit(params, x, y):
     amp2 = params['n5'].value
     t3 = params['n6'].value
     amp3 = params['n7'].value
+    gamp = params['n8'].value
+    gmu = params['n9'].value
+    gsd = params['n10'].value
 
     lmb1 = 1/t1
     lmb2 = 1/t2
@@ -68,7 +71,8 @@ def find_fit(params, x, y):
               (amp2*(lmb2/2)*(math.e**((lmb2/2)*(2*mu + lmb2*(sigma**2) - 2*x)))) * \
               (1-(erf((mu + lmb2*(sigma**2) - x)/(math.sqrt(2)*sigma)))) + \
               (amp3*(lmb3/2)*(math.e**((lmb3/2)*(2*mu + lmb3*(sigma**2) - 2*x)))) * \
-              (1-(erf((mu + lmb3*(sigma**2) - x)/(math.sqrt(2)*sigma))))
+              (1-(erf((mu + lmb3*(sigma**2) - x)/(math.sqrt(2)*sigma)))) + \
+              gamp*np.exp(-(((x-gmu)**2)/(2*gsd**2)))
     return abs(exp_fit - y)
 
 #Converts ADC counts to a voltage
@@ -132,6 +136,9 @@ if __name__ == '__main__':
     params.add('n5', value= 7, min=0, max=1000000)
     params.add('n6', value= 20, min=1, max=10000)
     params.add('n7', value= 7, min=0, max=1000)
+    params.add('n8', value= 7, min=0, max=1000)
+    params.add('n9', value= 38, min=20, max=50)
+    params.add('n10', value= 7, min=0, max=1000)
 
     result = minimize(find_fit, params, args=(center, y))
 
@@ -143,6 +150,9 @@ if __name__ == '__main__':
     amp2 = result.params['n5']
     t3 = result.params['n6']
     amp3 = result.params['n7']
+    gamp = result.params['n8']
+    gmu = result.params['n9']
+    gsd = result.params['n10']
 
     lmb1 = 1/t1
     lmb2 = 1/t2
@@ -151,7 +161,8 @@ if __name__ == '__main__':
               (1-(erf((mu + lmb1*(sigma**2) - x)/(math.sqrt(2)*sigma)))) + \
               (amp2*(lmb2/2)*(math.e**((lmb2/2)*(2*mu + lmb2*(sigma**2) - 2*x)))) * \
               (1-(erf((mu + lmb2*(sigma**2) - x)/(math.sqrt(2)*sigma)))) + \
-              (1-(erf((mu + lmb3*(sigma**2) - x)/(math.sqrt(2)*sigma))))
+              (1-(erf((mu + lmb3*(sigma**2) - x)/(math.sqrt(2)*sigma)))) + \
+              gamp*np.exp(-(((x-gmu)**2)/(2*gsd**2)))
 
     print 'Values:'
     print 't1=', t1
@@ -162,11 +173,14 @@ if __name__ == '__main__':
     print 'amp2=', amp2
     print 't3=', t3
     print 'amp3=', amp3
+    print 'gamp=', gamp
+    print 'gmu=', gmu
+    print 'gsd=', gsd
 
     plt.hist(t, bins)
     plt.xlabel("Time Resolution")
     plt.plot(bins, x_fit)
-#    plt.yscale('log')
-#    plt.ylim(ymin=.9)
+    plt.yscale('log')
+    plt.ylim(ymin=.9)
 
 plt.show()
