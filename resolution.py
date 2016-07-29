@@ -126,19 +126,21 @@ if __name__ == '__main__':
     print 'mu=', guess_mu
     print 'std=', guess_sd
     print 't1=', guess_t1
+    print 'entries=', len(t)
 
     params = Parameters()
     params.add('n0', value= guess_t1, min=1, max=100)
     params.add('n1', value= guess_mu, min=(guess_mu*.5), max=(guess_t1*2))
     params.add('n2', value= 1.2, min=.8, max=1.5)
-    params.add('n3', value= guess_amp1, min=(guess_amp1*.5), max=(guess_amp1*1.5))
+    params.add('n3', value= guess_amp1, min=(guess_amp1*.5), max=(guess_amp1*1.$
     params.add('n4', value= 20, min=1, max=1000)
     params.add('n5', value= 7, min=0, max=1000000)
     params.add('n6', value= 20, min=1, max=10000)
     params.add('n7', value= 7, min=0, max=1000)
     params.add('n8', value= 7, min=0, max=1000)
-    params.add('n9', value= 38, min=20, max=50)
-    params.add('n10', value= 7, min=0, max=1000)
+    params.add('n9', value= 38, min=30, max=50)
+    params.add('n10', value= 7, min=0, max=20)
+    params.add('n11', value= 10, min=1, max=20)
 
     result = minimize(find_fit, params, args=(center, y))
 
