@@ -132,7 +132,7 @@ if __name__ == '__main__':
     params.add('n0', value= guess_t1, min=1, max=5)
     params.add('n1', value= guess_mu, min=(guess_mu*.5), max=(guess_t1*2))
     params.add('n2', value= 1.2, min=.1, max=1.5)
-    params.add('n3', value= guess_amp1, min=(guess_amp1*.75), max=(guess_amp1*2$
+    params.add('n3', value= guess_amp1, min=(guess_amp1*.75), max=(guess_amp1*2)
     params.add('n4', value= 20, min=10, max=50)
     params.add('n5', value= 7, min=0, max=1000000)
     params.add('n6', value= 20, min=100, max=500)
