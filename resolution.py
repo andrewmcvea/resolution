@@ -108,7 +108,7 @@ if __name__ == '__main__':
                 res = t2 - t1
                 t.extend(res)
 
-    t = [a for a in t if a >= 0 and a <= 200]
+    t = [a for a in t if a >= 0 and a <= 700]
     bins = np.linspace(np.min(t),np.max(t),1000)
 
     y, x = np.histogram(t, bins) #Outputs the values for a histogram
