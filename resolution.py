@@ -62,6 +62,7 @@ def find_fit(params, x, y):
     gamp = params['n8'].value
     gmu = params['n9'].value
     gsd = params['n10'].value
+    c = params['n11'].value
 
     lmb1 = 1/t1
     lmb2 = 1/t2
@@ -71,9 +72,10 @@ def find_fit(params, x, y):
               (amp2*(lmb2/2)*(math.e**((lmb2/2)*(2*mu + lmb2*(sigma**2) - 2*x)))) * \
               (1-(erf((mu + lmb2*(sigma**2) - x)/(math.sqrt(2)*sigma)))) + \
               (amp3*(lmb3/2)*(math.e**((lmb3/2)*(2*mu + lmb3*(sigma**2) - 2*x)))) * \
-              (1-(erf((mu + lmb3*(sigma**2) - x)/(math.sqrt(2)*sigma)))) + \
-              gamp*np.exp(-(((x-gmu)**2)/(2*gsd**2)))
-    return abs(exp_fit - y)
+              (1-(erf((mu + lmb3*(sigma**2) - x)/(math.sqrt(2)*sigma)))) + c # \
+              #(gamp*np.exp(-(((x-gmu)**2)/(2*gsd**2))) + c) 
+              #Fit without gaussian bump first, then add bump later
+    return exp_fit - y
 
 #Converts ADC counts to a voltage
 def adc_to_voltage(a):
@@ -85,7 +87,7 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('-o', dest='output', default='out.txt')
+    parser.add_argument('-o', dest='output', default='histo.txt')
     parser.add_argument('filenames', nargs='+', help='input files')
     parser.add_argument('-c', '--chunk', type=int, default=10000)
     args = parser.parse_args()
@@ -113,7 +115,7 @@ if __name__ == '__main__':
 
     y, x = np.histogram(t, bins) #Outputs the values for a histogram
     center = (x[1:] + x[:-1])/2 #finds the center of the bins
-    
+
     #Approxiamtions for the parameters
     guess_mu = np.average(t)
     guess_sd = np.std(t)
@@ -129,20 +131,20 @@ if __name__ == '__main__':
     print 'entries=', len(t)
 
     params = Parameters()
-    params.add('n0', value= guess_t1, min=1, max=5)
-    params.add('n1', value= guess_mu, min=(guess_mu*.5), max=(guess_t1*2))
-    params.add('n2', value= 1.2, min=.1, max=1.5)
-    params.add('n3', value= guess_amp1, min=(guess_amp1*.75), max=(guess_amp1*2)
-    params.add('n4', value= 20, min=10, max=50)
-    params.add('n5', value= 7, min=0, max=1000000)
-    params.add('n6', value= 20, min=100, max=500)
-    params.add('n7', value= 7, min=0, max=1000)
-    params.add('n8', value= 7, min=0, max=1000)
+    params.add('n0', value= 2, min=1, max=10)
+    params.add('n1', value= guess_mu, min=0, max=(guess_mu*2))
+    params.add('n2', value= 1.2, min=.1, max=1.8)
+    params.add('n3', value= guess_amp1, min=(guess_amp1/10), max=100000)
+    params.add('n4', value= 20, min=10, max=100)
+    params.add('n5', value= 50, min=10, max=100000)
+    params.add('n6', value= 530, min=100, max=5000)
+    params.add('n7', value= 423, min=10, max=100000)
+    params.add('n8', value= 100, min=0, max=300)
     params.add('n9', value= 38, min=30, max=50)
     params.add('n10', value= 7, min=0, max=20)
-    params.add('n11', value= 10, min=1, max=20)
-    
-    result = minimize(find_fit, params, args=(center, y))
+    params.add('n11', value= 1.75, min=1, max=10)
+
+    result = minimize(find_fit, params, method='nelder', args=(center, y))
 
     t1 = result.params['n0']
     mu = result.params['n1']
@@ -155,6 +157,7 @@ if __name__ == '__main__':
     gamp = result.params['n8']
     gmu = result.params['n9']
     gsd = result.params['n10']
+    c = result.params['n11']
 
     lmb1 = 1/t1
     lmb2 = 1/t2
@@ -163,8 +166,9 @@ if __name__ == '__main__':
               (1-(erf((mu + lmb1*(sigma**2) - x)/(math.sqrt(2)*sigma)))) + \
               (amp2*(lmb2/2)*(math.e**((lmb2/2)*(2*mu + lmb2*(sigma**2) - 2*x)))) * \
               (1-(erf((mu + lmb2*(sigma**2) - x)/(math.sqrt(2)*sigma)))) + \
+              (amp3*(lmb3/2)*(math.e**((lmb3/2)*(2*mu + lmb3*(sigma**2) - 2*x)))) * \
               (1-(erf((mu + lmb3*(sigma**2) - x)/(math.sqrt(2)*sigma)))) + \
-              gamp*np.exp(-(((x-gmu)**2)/(2*gsd**2)))
+              (gamp*np.exp(-(((x-gmu)**2)/(2*gsd**2))) + c)
 
     print 'Values:'
     print 't1=', t1
@@ -178,6 +182,7 @@ if __name__ == '__main__':
     print 'gamp=', gamp
     print 'gmu=', gmu
     print 'gsd=', gsd
+    print 'c=', c
 
     plt.hist(t, bins)
     plt.xlabel("Time Resolution")
