@@ -72,9 +72,8 @@ def find_fit(params, x, y):
               (amp2*(lmb2/2)*(math.e**((lmb2/2)*(2*mu + lmb2*(sigma**2) - 2*x)))) * \
               (1-(erf((mu + lmb2*(sigma**2) - x)/(math.sqrt(2)*sigma)))) + \
               (amp3*(lmb3/2)*(math.e**((lmb3/2)*(2*mu + lmb3*(sigma**2) - 2*x)))) * \
-              (1-(erf((mu + lmb3*(sigma**2) - x)/(math.sqrt(2)*sigma)))) + c # \
-              #(gamp*np.exp(-(((x-gmu)**2)/(2*gsd**2))) + c) 
-              #Fit without gaussian bump first, then add bump later
+              (1-(erf((mu + lmb3*(sigma**2) - x)/(math.sqrt(2)*sigma)))) + \
+              (gamp*np.exp(-(((x-gmu)**2)/(2*gsd**2))) + c)
     return exp_fit - y
 
 #Converts ADC counts to a voltage
@@ -112,7 +111,6 @@ if __name__ == '__main__':
 
     t = [a for a in t if a >= 0 and a <= 700]
     bins = np.linspace(np.min(t),np.max(t),1000)
-
     y, x = np.histogram(t, bins) #Outputs the values for a histogram
     center = (x[1:] + x[:-1])/2 #finds the center of the bins
 
@@ -131,18 +129,18 @@ if __name__ == '__main__':
     print 'entries=', len(t)
 
     params = Parameters()
-    params.add('n0', value= 2, min=1, max=10)
+    params.add('n0', value= 4.92, min=4, max=5)
     params.add('n1', value= guess_mu, min=0, max=(guess_mu*2))
-    params.add('n2', value= 1.2, min=.1, max=1.8)
+    params.add('n2', value= .9, min=.1, max=1.8)
     params.add('n3', value= guess_amp1, min=(guess_amp1/10), max=100000)
-    params.add('n4', value= 20, min=10, max=100)
-    params.add('n5', value= 50, min=10, max=100000)
-    params.add('n6', value= 530, min=100, max=5000)
-    params.add('n7', value= 423, min=10, max=100000)
+    params.add('n4', value= 24.58, min=20, max=30)
+    params.add('n5', value= 18000, min=10, max=100000)
+    params.add('n6', value= 122, min=120, max=130)
+    params.add('n7', value= 2400, min=10, max=100000)
     params.add('n8', value= 100, min=0, max=300)
-    params.add('n9', value= 38, min=30, max=50)
-    params.add('n10', value= 7, min=0, max=20)
-    params.add('n11', value= 1.75, min=1, max=10)
+    params.add('n9', value= 38, min=35, max=40)
+    params.add('n10', value= 5, min=0, max=5)
+    params.add('n11', value= 1.75, min=1.5, max=3)
 
     result = minimize(find_fit, params, method='nelder', args=(center, y))
 
