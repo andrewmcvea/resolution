@@ -3,8 +3,6 @@ from __future__ import division
 import math
 import h5py
 import numpy as np
-from scipy.stats import norm
-from scipy.optimize import fmin
 from scipy.special import erf
 from lmfit import minimize, Parameters, Parameter, report_fit
 
@@ -156,6 +154,7 @@ if __name__ == '__main__':
     gmu = result.params['n9']
     gsd = result.params['n10']
     c = result.params['n11']
+    chi2 = result.chisqr
 
     lmb1 = 1/t1
     lmb2 = 1/t2
@@ -181,6 +180,7 @@ if __name__ == '__main__':
     print 'gmu=', gmu
     print 'gsd=', gsd
     print 'c=', c
+    print 'Chi-Squared=', chi2
 
     plt.hist(t, bins)
     plt.xlabel("Time Resolution")
