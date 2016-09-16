@@ -154,7 +154,9 @@ if __name__ == '__main__':
     gmu = result.params['n9']
     gsd = result.params['n10']
     c = result.params['n11']
-    chi2 = result.chisqr
+    chi = result.chisqr
+    dof = (len(center) - 12 - 1)
+    chi2 = chi / dof
 
     lmb1 = 1/t1
     lmb2 = 1/t2
