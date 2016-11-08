@@ -61,6 +61,8 @@ def find_fit(params, x, y):
     gmu = params['n9'].value
     gsd = params['n10'].value
     c = params['n11'].value
+    tau = params['n12'].value
+    rise = params['n13'].value
 
     lmb1 = 1/t1
     lmb2 = 1/t2
@@ -71,8 +73,9 @@ def find_fit(params, x, y):
               (1-(erf((mu + lmb2*(sigma**2) - x)/(math.sqrt(2)*sigma)))) + \
               (amp3*(lmb3/2)*(math.e**((lmb3/2)*(2*mu + lmb3*(sigma**2) - 2*x)))) * \
               (1-(erf((mu + lmb3*(sigma**2) - x)/(math.sqrt(2)*sigma)))) + \
-              (gamp*np.exp(-(((x-gmu)**2)/(2*gsd**2))) + c)
-    return exp_fit - y
+              (gamp*np.exp(-(((x-gmu)**2)/(2*gsd**2))) + c) + \
+              (math.e**(-x/tau) - math.e**(-x/rise))/(tau/rise)
+    return exp_fit**2 - y**2
 
 #Converts ADC counts to a voltage
 def adc_to_voltage(a):
@@ -109,6 +112,7 @@ if __name__ == '__main__':
 
     t = [a for a in t if a >= 0 and a <= 700]
     bins = np.linspace(np.min(t),np.max(t),1000)
+
     y, x = np.histogram(t, bins) #Outputs the values for a histogram
     center = (x[1:] + x[:-1])/2 #finds the center of the bins
 
@@ -127,18 +131,20 @@ if __name__ == '__main__':
     print 'entries=', len(t)
 
     params = Parameters()
-    params.add('n0', value= 4.9299, vary=True, min=1, max=10)
-    params.add('n1', value= 11.87, vary=True, min=0, max=(guess_mu*2))
-    params.add('n2', value= .931, vary=True, min=.1, max=1.8)
-    params.add('n3', value= 82049.26, vary=True, min=(guess_amp1/10), max=100000)
-    params.add('n4', value= 24, vary=True, min=10, max=100)
-    params.add('n5', value= 18000, vary=True, min=10, max=100000)
-    params.add('n6', value= 122.84, vary=True, min=100, max=1000)
-    params.add('n7', value= 2475.64, vary=True, min=10, max=100000)
-    params.add('n8', value= 162.08, vary=True, min=0, max=300)
-    params.add('n9', value= 38.81, vary=True, min=35, max=40)
-    params.add('n10', value= 4.207, vary=True,  min=0, max=5)
-    params.add('n11', value= 1.757, vary=True, min=1, max=20)
+    params.add('n0', value= 4.929, vary=True, min=1, max=5)
+    params.add('n1', value= 11.84, vary=True, min=0, max=(guess_mu*2))
+    params.add('n2', value= .86, vary=True, min=.1, max=1.8)
+    params.add('n3', value= 89168.95, vary=True, min=(guess_amp1/10), max=100000)
+    params.add('n4', value= 19, vary=True, min=5, max=50)
+    params.add('n5', value= 18000, vary=True, min=10000, max=20000)
+    params.add('n6', value= 122.85, vary=True, min=50, max=500)
+    params.add('n7', value= 2475.64, vary=True, min=1000, max=5000)
+    params.add('n8', value= 244.27, vary=True, min=1, max=300)
+    params.add('n9', value= 38.9, vary=True, min=35, max=40)
+    params.add('n10', value= 5.228, vary=True,  min=0, max=10)
+    params.add('n11', value= 1.75, vary=True, min=1, max=20)
+    params.add('n12', value= 1.3, vary=True, min=.01, max=100)
+    params.add('n13', value= 1.75, vary=True, min=.01, max=1000)
 
     result = minimize(find_fit, params, method='nelder', args=(center, y))
 
@@ -154,20 +160,23 @@ if __name__ == '__main__':
     gmu = result.params['n9']
     gsd = result.params['n10']
     c = result.params['n11']
+    tau = result.params['n12']
+    rise = result.params['n13']
     chi = result.chisqr
     dof = (len(center) - 12 - 1)
     chi2 = chi / dof
-
     lmb1 = 1/t1
     lmb2 = 1/t2
     lmb3 = 1/t3
+
     x_fit = (amp1*(lmb1/2)*(math.e**((lmb1/2)*(2*mu + lmb1*(sigma**2) - 2*x)))) * \
               (1-(erf((mu + lmb1*(sigma**2) - x)/(math.sqrt(2)*sigma)))) + \
               (amp2*(lmb2/2)*(math.e**((lmb2/2)*(2*mu + lmb2*(sigma**2) - 2*x)))) * \
               (1-(erf((mu + lmb2*(sigma**2) - x)/(math.sqrt(2)*sigma)))) + \
               (amp3*(lmb3/2)*(math.e**((lmb3/2)*(2*mu + lmb3*(sigma**2) - 2*x)))) * \
               (1-(erf((mu + lmb3*(sigma**2) - x)/(math.sqrt(2)*sigma)))) + \
-              (gamp*np.exp(-(((x-gmu)**2)/(2*gsd**2))) + c)
+              (gamp*np.exp(-(((x-gmu)**2)/(2*gsd**2))) + c) + \
+              (math.e**(-x/tau) - math.e**(-x/rise))/(tau/rise)
 
     print 'Values:'
     print 't1=', t1
@@ -182,9 +191,11 @@ if __name__ == '__main__':
     print 'gmu=', gmu
     print 'gsd=', gsd
     print 'c=', c
-    print 'Chi-Squared=', chi2
+    print 'tau=', tau
+    print 'Rise Time=', rise
+    print 'Chi Squared=', chi2
 
-    plt.hist(t, bins)
+    plt.hist(t, bins, histtype='step')
     plt.xlabel("Time Resolution")
     plt.plot(bins, x_fit)
     plt.yscale('log')
