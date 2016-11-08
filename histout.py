@@ -45,7 +45,7 @@ if __name__ == '__main__':
 #Calculate the time resolution for each pulse and creates an array of these values
     t = []
     for filename in args.filenames:
-        with h5py.File(filename) as f:
+            with h5py.File(filename) as f:
             for i in range(0, f['c1'].shape[0], args.chunk):
                 y1 = adc_to_voltage(f['c1'][i:i+args.chunk])
                 y2 = adc_to_voltage(f['c2'][i:i+args.chunk])
@@ -64,6 +64,7 @@ if __name__ == '__main__':
     bins = np.linspace(np.min(t),np.max(t),1000)
 
     y, x = np.histogram(t, bins) #Outputs the values for a histogram
-    
-    data = zip(y, x)
-    np.savetxt('outhist.txt', data, delimeter=',')
+    center = (x[1:] + x[:-1])/2 #finds the center of the bins
+
+    data = zip(y, center)
+    np.savetxt('outhist.txt', data)
