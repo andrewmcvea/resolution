@@ -120,10 +120,13 @@ print 'tau=', tau
 print 'Rise Time=', rise
 print 'Chi Squared=', chi2
 
+bins = np.linspace(np.min(x),np.max(x),len(x))
+
 plt.xlabel("Time Resolution")
-plt.hist(y, x, histtype='step')
-plt.plot(x, x_fit)
+plt.step(x, y)
+plt.plot(bins, x_fit)
 plt.yscale('log')
 plt.ylim(ymin=.9)
 
 plt.show()
+
